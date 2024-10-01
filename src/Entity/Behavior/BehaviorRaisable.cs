@@ -107,9 +107,7 @@ namespace PetAI
                     adult.WatchedAttributes.SetInt("textureIndex", entity.WatchedAttributes.GetInt("textureIndex", 0));
                 }
                 if(entity is EntityPet childPet && adult is EntityPet adultPet){
-                    for(int i = 0; i<childPet.GearInventory.Count; i++){
-                        childPet.GearInventory[i].TryPutInto(entity.World, adultPet.GearInventory[i]);
-                    }
+
                 }
             }
             else
@@ -134,7 +132,6 @@ namespace PetAI
         {
             entity.World.UnregisterCallback(callbackId);
         }
-
 
         public override string PropertyName()
         {

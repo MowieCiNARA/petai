@@ -5,10 +5,7 @@
             "C": {
                 "type": "block",
                 "code": "petnest-small-*",
-                "name": "color",
-                "skipVariants": [
-                    "mordant"
-                ]
+                "name": "color"
             }
         },
         "width": 2,

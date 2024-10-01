@@ -2,57 +2,20 @@ using Vintagestory.API.Config;
 using System;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
-using Vintagestory.API.Datastructures;
-using System.IO;
 using Vintagestory.GameContent;
 
 namespace PetAI
 {
     public class EntityPet : EntityAgent
     {
-        protected InventoryPetGear gearInv;
 
-        public InventorySlotBound backpackInv;
-        public override IInventory GearInventory => gearInv;
         public override void Initialize(EntityProperties properties, ICoreAPI api, long InChunkIndex3d)
         {
             base.Initialize(properties, api, InChunkIndex3d);
-            if (gearInv == null) gearInv = new InventoryPetGear(Code.Path, "petInv-" + EntityId, api);
-            else gearInv.Api = api;
-            gearInv.LateInitialize(gearInv.InventoryID, api);
-            var slots = new ItemSlot[gearInv.Count];
-            for (int i = 0; i < gearInv.Count; i++)
-            {
-                slots[i] = gearInv[i];
-            }
-            backpackInv = new InventorySlotBound("petBackPackInv-", api, slots);
-
             if (api.Side == EnumAppSide.Server)
             {
                 GetBehavior<EntityBehaviorHealth>().onDamaged += (dmg, dmgSource) => applyPetArmor(dmg, dmgSource);
             }
-        }
-
-        public override void FromBytes(BinaryReader reader, bool forClient)
-        {
-            base.FromBytes(reader, forClient);
-
-            if (gearInv == null) { gearInv = new InventoryPetGear(Code.Path, "petInv-" + EntityId, null); }
-            gearInv.FromTreeAttributes(getInventoryTree());
-        }
-
-        public override void ToBytes(BinaryWriter writer, bool forClient)
-        {
-            try
-            {
-                gearInv.ToTreeAttributes(getInventoryTree());
-            }
-            catch (NullReferenceException)
-            {
-                // ignore, better save whats left of it
-            }
-
-            base.ToBytes(writer, forClient);
         }
 
         public override string GetInfoText()
@@ -72,34 +35,27 @@ namespace PetAI
 
         public void DropInventoryOnGround()
         {
-            for (int i = gearInv.Count - 1; i >= 0; i--)
+            for (int i = this.GetBehavior<EntityBehaviorAttachable>().Inventory.Count - 1; i >= 0; i--)
             {
-                if (gearInv[i].Empty) { continue; }
+                if (this.GetBehavior<EntityBehaviorAttachable>().Inventory[i].Empty) { continue; }
 
-                Api.World.SpawnItemEntity(gearInv[i].TakeOutWhole(), ServerPos.XYZ);
-                gearInv.MarkSlotDirty(i);
+                Api.World.SpawnItemEntity(this.GetBehavior<EntityBehaviorAttachable>().Inventory[i].TakeOutWhole(), Pos.XYZ);
+                this.GetBehavior<EntityBehaviorAttachable>().Inventory.MarkSlotDirty(i);
             }
         }
 
-        private ITreeAttribute getInventoryTree()
-        {
-            if (!WatchedAttributes.HasAttribute("petinventory"))
-            {
-                ITreeAttribute tree = new TreeAttribute();
-                gearInv.ToTreeAttributes(tree);
-                WatchedAttributes.SetAttribute("petinventory", tree);
-            }
-            return WatchedAttributes.GetTreeAttribute("petinventory");
-        }
         private float applyPetArmor(float dmg, DamageSource dmgSource)
         {
             if (dmgSource.SourceEntity != null && dmgSource.Type != EnumDamageType.Heal)
             {
-                foreach (var slot in GearInventory)
+                foreach (var item in this.GetBehavior<EntityBehaviorAttachable>().Inventory)
                 {
-                    if (!slot.Empty)
+                    if (item != null && item.Itemstack != null && item.Itemstack.Item != null)
                     {
-                        dmg *= 1 - (slot.Itemstack.Item as ItemPetAccessory).damageReduction;
+                        if (item.Itemstack.Item is ItemPetAccessory)
+                        {
+                            dmg *= (1.0f - (item.Itemstack.Item as ItemPetAccessory).damageReduction);
+                        }
                     }
                 }
             }
@@ -108,12 +64,25 @@ namespace PetAI
 
         public override bool ShouldReceiveDamage(DamageSource damageSource, float damage)
         {
-            if (PetConfig.Current.PvpOff
+            string ownerOfPet = GetBehavior<EntityBehaviorTameable>()?.ownerId;
+            bool isOwnerOfPet = false;
+            if (damageSource.Source == EnumDamageSource.Player)
+            {
+                if (damageSource.SourceEntity is EntityPlayer)
+                {
+                    isOwnerOfPet = ((EntityPlayer)damageSource.SourceEntity).PlayerUID == ownerOfPet;
+                }
+            }
+            if (damageSource.CauseEntity is EntityPlayer) {
+                isOwnerOfPet = ((EntityPlayer)damageSource.SourceEntity).PlayerUID == ownerOfPet;
+            }
+            if ((PetConfig.Current.PvpOff
                 && GetBehavior<EntityBehaviorTameable>()?.domesticationLevel != DomesticationLevel.WILD
-                && damageSource.CauseEntity is EntityPlayer player
-                && player.PlayerUID != GetBehavior<EntityBehaviorTameable>()?.ownerId
-                || damageSource.Source == EnumDamageSource.Fall
+                && !isOwnerOfPet)
+                || (damageSource.Source == EnumDamageSource.Fall
                 && PetConfig.Current.FalldamageOff)
+                || (isOwnerOfPet 
+                && PetConfig.Current.SelfPetsDamageOff))
             {
                 return false;
             }

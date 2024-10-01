@@ -4,6 +4,7 @@ using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Client;
 using System.Collections.Generic;
+using Vintagestory.API.Util;
 
 namespace PetAI
 {
@@ -26,26 +27,22 @@ namespace PetAI
 
         public float mountWalkingSpeed { get; private set; } = 0.02f;
         public float mountRunningSpeed { get; private set; } = 0.06f;
-        public IMountableSupplier MountSupplier => null;
 
-        public bool CanControl => false;
+        public bool CanControl => CanControl;
 
-        public Entity MountedBy => rider;
+        public Entity MountedBy => Seats != null && Seats.Length > 0 ? this.Seats[0].Passenger : null;
 
         EntityPos mountPos = new EntityPos();
-        EntityPos IMountable.MountPosition
-        {
-            get
-            {
-                mountPos.SetPos(MountPosition);
-                return mountPos;
-            }
-
-        }
 
         public EnumMountAngleMode AngleMode => EnumMountAngleMode.PushYaw;
 
-        Vec3f IMountable.LocalEyePos => new Vec3f(0, unchecked((float)Properties.EyeHeight), 0);
+        //Vec3f IMountable.LocalEyePos => new Vec3f(0, unchecked((float)Properties.EyeHeight), 0); //TODO git?
+
+        public IMountableSeat[] Seats => Seats;
+
+        public EntityPos Position => SidedPos;
+
+        public Entity Controller => Controller;//TODO?
 
         public override void Initialize(EntityProperties properties, ICoreAPI api, long InChunkIndex3d)
         {
@@ -84,17 +81,28 @@ namespace PetAI
 
         public override void OnInteract(EntityAgent byEntity, ItemSlot slot, Vec3d hitPosition, EnumInteractMode mode)
         {
+            // TODO
+            /*
             if (mode == EnumInteractMode.Interact
                 && !byEntity.Controls.Sprint
                 && slot.Empty
                 && GetBehavior<EntityBehaviorTameable>()?.cachedOwner?.Entity == byEntity)
             {
-                byEntity.TryMount(this);
+                foreach (IMountableSeat seat in Seats)
+                {
+                    if (seat.CanMount(byEntity))
+                    {
+                        this.TryMount(seat);
+                        break;
+                    }
+                }
             }
             else
             {
                 base.OnInteract(byEntity, slot, hitPosition, mode);
             }
+            */
+            base.OnInteract(byEntity, slot, hitPosition, mode);
         }
 
         public override bool ShouldReceiveDamage(DamageSource damageSource, float damage)
@@ -184,5 +192,10 @@ namespace PetAI
             EaseOutSpeed = 1f,
             AnimationSpeed = json["animationSpeed"].AsFloat()
         }.Init();
+
+        public bool AnyMounted()
+        {
+            return MountedBy != null;
+        }
     }
 }

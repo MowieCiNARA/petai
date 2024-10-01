@@ -269,17 +269,7 @@ namespace PetAI
             // We need to Handle the Clientpacket here as we cannot prevent subsequent packet handling when using the Entitymethod directly
             if (entity.Alive && packetid < 1000 && (entity is EntityPet))
             {
-                var inv = (entity as EntityPet)?.backpackInv as InventorySlotBound;
-                inv.reloadFromSlots();
-                inv.InvNetworkUtil.HandleClientPacket(player, packetid, data);
-                inv.saveAllSlots();
                 handled = EnumHandling.PreventSubsequent;
-                for (int i = 0; i < inv.Count; i++)
-                {
-                    if (inv[i].Empty) { continue; }
-
-                    inv.MarkSlotDirty(i);
-                }
             }
         }
         public override string PropertyName()
@@ -411,7 +401,6 @@ namespace PetAI
             var pet = entity as EntityPet;
             if (pet != null && item is ItemPetAccessory)
             {
-                return slot.TryFlipWith(pet.GearInventory.GetBestSuitedSlot(slot)?.slot);
             }
             return false;
         }

@@ -48,7 +48,8 @@ namespace PetAI
 
             api.RegisterEntity("EntityPet", typeof(EntityPet));
             api.RegisterEntity("EntityMount", typeof(EntityMount));
-            api.RegisterMountable("EntityMount", EntityMount.GetMountable);
+            //api.RegisterEntityBehaviorClass("EntityBehaviorAttachable", typeof(EntityMount));
+            //api.RegisterMountable("EntityMount", EntityMount.GetMountable);
 
             api.RegisterItemClass("ItemPetAccessory", typeof(ItemPetAccessory));
             api.RegisterItemClass("ItemPetWhistle", typeof(ItemPetWhistle));
@@ -184,6 +185,7 @@ namespace PetAI
         public Difficulty Difficulty { get; set; }
         public List<PetResurrector> Resurrectors { get; set; }
         public bool PvpOff { get; set; }
+        public bool SelfPetsDamageOff { get; set; }
         public bool FalldamageOff { get; set; }
         public bool AllowTeleport { get; set; }
         public static PetConfig getDefault()
